@@ -1,0 +1,22 @@
+name: Node.js CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: volta-cli/action@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 9.5.0
+          run_install: false
+      - run: pnpm i
+      - run: pnpm run lint
+      - run: pnpm test
+      - run: pnpm run build
+        env:
+          CI: true
