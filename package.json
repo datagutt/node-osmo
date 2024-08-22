@@ -36,9 +36,9 @@
     "build:watch": "tsc -w -p tsconfig.json",
     "build:release": "npm run clean && tsc -p tsconfig.release.json",
     "lint": "eslint . --ext .ts --ext .mts",
-    "test": "jest --coverage",
+    "test": "jest --coverage --passWithNoTests",
     "prettier": "prettier --config .prettierrc --write .",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch --passWithNoTests"
   },
   "author": "Thomas Lekanger <datagutt@lekanger.no>",
   "license": "MIT",
