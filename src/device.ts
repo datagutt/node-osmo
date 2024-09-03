@@ -114,6 +114,9 @@ export class DjiDevice {
   }
 
   stopLiveStream(): void {
+    if (this.state === DjiDeviceState.idle) {
+      return;
+    }
     console.info('dji-device: Stop live stream');
     this.stopStartStreamingTimer();
     this.startStopStreamingTimer();
@@ -171,6 +174,9 @@ export class DjiDevice {
   }
 
   private setState(state: DjiDeviceState): void {
+    if (this.state === state) {
+      return;
+    }
     console.info(`dji-device: State change ${this.state} -> ${state}`);
     this.state = state;
     this.onStreamingStateChange?.(this, state);
