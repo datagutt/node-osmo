@@ -1,18 +1,19 @@
-
 export enum DjiDeviceImageStabilization {
-  Off = "Off",
-  RockSteady = "RockSteady",
-  RockSteadyPlus = "RockSteady+",
-  HorizonBalancing = "HorizonBalancing",
-  HorizonSteady = "HorizonSteady",
+  Off = 'Off',
+  RockSteady = 'RockSteady',
+  RockSteadyPlus = 'RockSteady+',
+  HorizonBalancing = 'HorizonBalancing',
+  HorizonSteady = 'HorizonSteady',
 }
 
-export const djiDeviceImageStabilizations = Object.values(DjiDeviceImageStabilization);
+export const djiDeviceImageStabilizations = Object.values(
+  DjiDeviceImageStabilization,
+);
 
 export enum DjiDeviceResolution {
-  r480p = "480p",
-  r720p = "720p",
-  r1080p = "1080p",
+  r480p = '480p',
+  r720p = '720p',
+  r1080p = '1080p',
 }
 
 export enum DjiDeviceModel {
@@ -29,6 +30,8 @@ export enum DjiDeviceModelName {
 }
 export const djiDeviceResolutions = Object.values(DjiDeviceImageStabilization);
 
-export const djiDeviceBitrates: number[] = [12000000, 8000000, 6000000, 4000000, 2000000];
+export const djiDeviceBitrates: number[] = [
+  12000000, 8000000, 6000000, 4000000, 2000000,
+];
 
-export const djiDeviceFpss: number[] = [25, 30]
+export const djiDeviceFpss: number[] = [25, 30];

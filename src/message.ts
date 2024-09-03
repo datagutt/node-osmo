@@ -9,7 +9,15 @@ function djiCrc8(data: Buffer): number {
 }
 
 function djiCrc16(data: Buffer): number {
-  const crc = new CRC('CRC16_CCITT_FALSE', 16, 0x1021, 0x496c, 0x0000, true, true);
+  const crc = new CRC(
+    'CRC16_CCITT_FALSE',
+    16,
+    0x1021,
+    0x496c,
+    0x0000,
+    true,
+    true,
+  );
   return crc.compute(data);
 }
 
@@ -61,7 +69,6 @@ export class DjiMessage {
     return `DjiMessage(target=${this.target}, id=${this.id}, type=${this.type}, payload=${this.payload.toString('hex')})`;
   }
 }
-
 
 export class DjiMessageWithData extends DjiMessage {
   data: Buffer;

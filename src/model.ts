@@ -1,11 +1,13 @@
-import {DjiDeviceModel, DjiDeviceModelName} from "./enums.js";
+import { DjiDeviceModel, DjiDeviceModelName } from './enums.js';
 
-const djiTechnologyCoLtd = Buffer.from([0xAA, 0x08]);
+const djiTechnologyCoLtd = Buffer.from([0xaa, 0x08]);
 const djiDeviceModelOsmoAction3 = Buffer.from([0x12, 0x00]);
 const djiDeviceModelOsmoAction4 = Buffer.from([0x14, 0x00]);
 const djiDeviceModelOsmoPocket3 = Buffer.from([0x20, 0x00]);
 
-export function djiModelFromManufacturerData(data: Buffer): DjiDeviceModel | null {
+export function djiModelFromManufacturerData(
+  data: Buffer,
+): DjiDeviceModel | null {
   if (data.length < 4) {
     return null;
   }
@@ -20,7 +22,9 @@ export function djiModelFromManufacturerData(data: Buffer): DjiDeviceModel | nul
     return DjiDeviceModel.unknown;
   }
 }
-export function djiModelNameFromManufacturerData(data: Buffer): DjiDeviceModelName | null {
+export function djiModelNameFromManufacturerData(
+  data: Buffer,
+): DjiDeviceModelName | null {
   if (data.length < 4) {
     return null;
   }
@@ -39,4 +43,3 @@ export function djiModelNameFromManufacturerData(data: Buffer): DjiDeviceModelNa
 export function isDjiDevice(manufacturerData: Buffer): boolean {
   return manufacturerData.subarray(0, 2).equals(djiTechnologyCoLtd);
 }
-

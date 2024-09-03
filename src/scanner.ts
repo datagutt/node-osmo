@@ -1,11 +1,11 @@
-import Noble, {Peripheral} from '@abandonware/noble';
-import {EventEmitter} from 'events';
+import Noble, { Peripheral } from '@abandonware/noble';
+import { EventEmitter } from 'events';
 import {
   djiModelFromManufacturerData,
   djiModelNameFromManufacturerData,
   isDjiDevice,
 } from './model.js';
-import {DjiDeviceModel, DjiDeviceModelName} from './enums.js';
+import { DjiDeviceModel, DjiDeviceModelName } from './enums.js';
 
 export class DjiDiscoveredDevice {
   peripheral: Peripheral;

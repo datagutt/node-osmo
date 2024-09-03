@@ -7,7 +7,7 @@ Features:
 - [x] Pairing
 - [x] Connecting to Wi-Fi
 - [x] Selecting resolution, FPS, bitrate and stabilizer mode
-- [x] Going live to a specified RTMP server 
+- [x] Going live to a specified RTMP server
 - [x] Getting battery percentage
 
 ## Getting Started
@@ -26,6 +26,7 @@ This project is intended to be used with the latest Active LTS release of Node.j
 - `test:watch` - interactive watch mode to automatically re-run tests
 
 ## Thanks
+
 This library would not be possible without these great people and projects:
 
 - [Spillmaker](https://github.com/spillmaker) - Initial reverse-engineering of the protocol

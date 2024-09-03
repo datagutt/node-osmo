@@ -2,11 +2,7 @@
   "compilerOptions": {
     "target": "es2022",
     "module": "node16",
-    "lib": [
-      "ES2022",
-      "dom",
-      "es6"
-    ],
+    "lib": ["ES2022", "dom", "es6"],
     "moduleResolution": "node16",
     // Types should go into this directory.
     // Removing this would place the .d.ts files
@@ -33,8 +29,5 @@
     // "Go to Definition" in VSCode
     "declarationMap": true
   },
-  "include": [
-    "./src/**/*",
-    "__tests__/**/*"
-  ]
+  "include": ["./src/**/*", "__tests__/**/*"]
 }
