@@ -1,6 +1,6 @@
 {
   "name": "node-osmo",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Typescript library for controlling DJI Osmo Action 4 and Pocket 3 using BLE (Bluetooth Low Energy)",
   "type": "module",
   "source": "./src/index.ts",

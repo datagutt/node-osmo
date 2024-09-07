@@ -265,10 +265,6 @@ export class DjiDevice {
               console.error('dji-device: Characteristic read error', error);
               return;
             }
-            console.info(
-              `uffs ${data.toString('hex')} from characteristic ${characteristic.uuid}`,
-              data,
-            );
             this.onCharacteristicValueChanged(characteristic, data);
           });
           await characteristic.notifyAsync(true);
