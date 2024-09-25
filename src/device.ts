@@ -486,7 +486,7 @@ export class DjiDevice {
       this.rtmpUrl,
       this.resolution,
       this.fps,
-      this.bitrate,
+      this.bitrate / 1000,
       this.model === DjiDeviceModel.osmoAction5Pro,
     );
     this.writeMessage(
