@@ -19,19 +19,22 @@ export enum DjiDeviceResolution {
 export enum DjiDeviceModel {
   osmoAction3,
   osmoAction4,
+  osmoAction5Pro,
   osmoPocket3,
   unknown,
 }
 export enum DjiDeviceModelName {
   osmoAction3 = 'Osmo Action 3',
   osmoAction4 = 'Osmo Action 4',
+  osmoAction5Pro = 'Osmo Action 5 Pro',
   osmoPocket3 = 'Osmo Pocket 3',
   unknown = 'Unknown',
 }
 export const djiDeviceResolutions = Object.values(DjiDeviceImageStabilization);
 
 export const djiDeviceBitrates: number[] = [
-  12000000, 8000000, 6000000, 4000000, 2000000,
+  20_000_000, 16_000_000, 12_000_000, 8_000_000, 6_000_000, 4_000_000,
+  2_000_000,
 ];
 
 export const djiDeviceFpss: number[] = [25, 30];

@@ -152,24 +152,28 @@ export class DjiSetupWifiMessagePayload {
 }
 
 export class DjiStartStreamingMessagePayload {
-  static payload1 = Buffer.from([0x00, 0x2e, 0x00]);
-  static payload2 = Buffer.from([0x02, 0x00]);
-  static payload3 = Buffer.from([0x00, 0x00, 0x00]);
+  static payload1 = Buffer.from([0x00]);
+  static payload2 = Buffer.from([0x00]);
+  static payload3 = Buffer.from([0x02, 0x00]);
+  static payload4 = Buffer.from([0x00, 0x00, 0x00]);
   rtmpUrl: string;
   resolution: DjiDeviceResolution;
   fps: number;
   bitrateKbps: number;
+  oa5: boolean;
 
   constructor(
     rtmpUrl: string,
     resolution: DjiDeviceResolution,
     fps: number,
     bitrateKbps: number,
+    oa5: boolean,
   ) {
     this.rtmpUrl = rtmpUrl;
     this.resolution = resolution;
     this.fps = fps;
     this.bitrateKbps = bitrateKbps;
+    this.oa5 = oa5;
   }
 
   encode(): Buffer {
@@ -203,17 +207,25 @@ export class DjiStartStreamingMessagePayload {
       default:
         fpsByte = 0;
     }
+    let byte1: number;
+    if (this.oa5) {
+      byte1 = 0x2a;
+    } else {
+      byte1 = 0x2e;
+    }
 
     const fpsBuffer = Buffer.from([fpsByte]);
     const urlBuffer = djiPackUrl(this.rtmpUrl);
 
     return Buffer.concat([
       DjiStartStreamingMessagePayload.payload1,
+      Buffer.from([byte1]),
+      DjiStartStreamingMessagePayload.payload2,
       Buffer.from([resolutionByte]),
       bitrateBuffer,
-      DjiStartStreamingMessagePayload.payload2,
-      fpsBuffer,
       DjiStartStreamingMessagePayload.payload3,
+      fpsBuffer,
+      DjiStartStreamingMessagePayload.payload4,
       urlBuffer,
     ]);
   }
@@ -228,12 +240,15 @@ export class DjiStopStreamingMessagePayload {
 }
 
 export class DjiConfigureMessagePayload {
-  static payload = Buffer.from([0x01, 0x01, 0x08, 0x00, 0x01]);
+  static payload1 = Buffer.from([0x01, 0x01]);
+  static payload2 = Buffer.from([0x00, 0x01]);
 
   imageStabilization: DjiDeviceImageStabilization;
+  oa5: boolean;
 
-  constructor(imageStabilization: DjiDeviceImageStabilization) {
+  constructor(imageStabilization: DjiDeviceImageStabilization, oa5: boolean) {
     this.imageStabilization = imageStabilization;
+    this.oa5 = oa5;
   }
 
   encode(): Buffer {
@@ -257,8 +272,16 @@ export class DjiConfigureMessagePayload {
       default:
         throw new Error('Unknown image stabilization');
     }
+    let byte1: number;
+    if (this.oa5) {
+      byte1 = 0x1a;
+    } else {
+      byte1 = 0x08;
+    }
     return Buffer.concat([
-      DjiConfigureMessagePayload.payload,
+      DjiConfigureMessagePayload.payload1,
+      Buffer.from([byte1]),
+      DjiConfigureMessagePayload.payload2,
       Buffer.from([imageStabilizationByte]),
     ]);
   }

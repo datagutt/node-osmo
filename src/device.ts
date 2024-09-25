@@ -421,11 +421,17 @@ export class DjiDevice {
     }
     switch (+this.model) {
       case DjiDeviceModel.osmoAction3:
-      case DjiDeviceModel.osmoPocket3:
         this.sendStartStreaming();
         break;
+
       case DjiDeviceModel.osmoAction4: {
-        const payload = new DjiConfigureMessagePayload(this.imageStabilization);
+        if (!this.imageStabilization) {
+          return;
+        }
+        const payload = new DjiConfigureMessagePayload(
+          this.imageStabilization,
+          false,
+        );
         this.writeMessage(
           new DjiMessage(
             configureTarget,
@@ -437,6 +443,28 @@ export class DjiDevice {
         this.setState(DjiDeviceState.configuring);
         break;
       }
+      case DjiDeviceModel.osmoAction5Pro: {
+        if (!this.imageStabilization) {
+          return;
+        }
+        const payload = new DjiConfigureMessagePayload(
+          this.imageStabilization,
+          true,
+        );
+        this.writeMessage(
+          new DjiMessage(
+            configureTarget,
+            configureTransactionId,
+            configureType,
+            payload.encode(),
+          ),
+        );
+        this.setState(DjiDeviceState.configuring);
+        break;
+      }
+      case DjiDeviceModel.osmoPocket3:
+        this.sendStartStreaming();
+        break;
       case DjiDeviceModel.unknown:
         this.sendStartStreaming();
         break;
@@ -458,7 +486,8 @@ export class DjiDevice {
       this.rtmpUrl,
       this.resolution,
       this.fps,
-      this.bitrate / 1000,
+      this.bitrate,
+      this.model === DjiDeviceModel.osmoAction5Pro,
     );
     this.writeMessage(
       new DjiMessage(

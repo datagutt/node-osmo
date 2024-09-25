@@ -24,7 +24,7 @@ scanner.stopScanningForDevices();
 */
 
 const device = new DjiDevice('id-of-device', DjiDeviceModel.osmoAction4);
-console.log('Discovered device:', peripheral);
+console.log('Device:', device);
 await device.startLiveStream(
   'Wi-Fi-Name', // wi-fi name
   'Wi-Fi-Password', // wi-fi password

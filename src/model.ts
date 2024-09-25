@@ -3,6 +3,7 @@ import { DjiDeviceModel, DjiDeviceModelName } from './enums.js';
 const djiTechnologyCoLtd = Buffer.from([0xaa, 0x08]);
 const djiDeviceModelOsmoAction3 = Buffer.from([0x12, 0x00]);
 const djiDeviceModelOsmoAction4 = Buffer.from([0x14, 0x00]);
+const djiDeviceModelOsmoAction5Pro = Buffer.from([0x15, 0x00]);
 const djiDeviceModelOsmoPocket3 = Buffer.from([0x20, 0x00]);
 
 export function djiModelFromManufacturerData(
@@ -16,6 +17,8 @@ export function djiModelFromManufacturerData(
     return DjiDeviceModel.osmoAction3;
   } else if (modelData.equals(djiDeviceModelOsmoAction4)) {
     return DjiDeviceModel.osmoAction4;
+  } else if (modelData.equals(djiDeviceModelOsmoAction5Pro)) {
+    return DjiDeviceModel.osmoAction5Pro;
   } else if (modelData.equals(djiDeviceModelOsmoPocket3)) {
     return DjiDeviceModel.osmoPocket3;
   } else {
@@ -33,6 +36,8 @@ export function djiModelNameFromManufacturerData(
     return DjiDeviceModelName.osmoAction3;
   } else if (modelData.equals(djiDeviceModelOsmoAction4)) {
     return DjiDeviceModelName.osmoAction4;
+  } else if (modelData.equals(djiDeviceModelOsmoAction5Pro)) {
+    return DjiDeviceModelName.osmoAction5Pro;
   } else if (modelData.equals(djiDeviceModelOsmoPocket3)) {
     return DjiDeviceModelName.osmoPocket3;
   } else {
