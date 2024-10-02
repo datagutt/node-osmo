@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import noble, { Peripheral, Characteristic, Service } from '@abandonware/noble';
+import noble, { Peripheral, Characteristic, Service } from '@stoprocent/noble';
 
 import { DjiDeviceModel, DjiDeviceModelName } from './enums.js';
 import { DjiDeviceResolution, DjiDeviceImageStabilization } from './enums.js';
@@ -106,7 +106,7 @@ export class DjiDevice {
     this.reset();
     this.startStartStreamingTimer();
     this.setState(DjiDeviceState.discovering);
-    this.noble = await import('@abandonware/noble').then(
+    this.noble = await import('@stoprocent/noble').then(
       (module) => module.default,
     );
     this.noble.on('stateChange', this.onStateChange.bind(this));

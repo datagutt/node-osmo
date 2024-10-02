@@ -1,4 +1,4 @@
-import Noble, { Peripheral } from '@abandonware/noble';
+import Noble, { Peripheral } from '@stoprocent/noble';
 import { EventEmitter } from 'events';
 import {
   djiModelFromManufacturerData,
@@ -33,7 +33,7 @@ export class DjiDeviceScanner extends EventEmitter {
 
   async startScanningForDevices(): Promise<void> {
     this.discoveredDevices = [];
-    this.noble = await import('@abandonware/noble').then(
+    this.noble = await import('@stoprocent/noble').then(
       (module) => module.default,
     );
     this.noble.on('stateChange', this.onStateChange.bind(this));

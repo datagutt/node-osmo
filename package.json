@@ -43,7 +43,7 @@
   "author": "Thomas Lekanger <datagutt@lekanger.no>",
   "license": "MIT",
   "dependencies": {
-    "@abandonware/noble": "1.9.2-25",
+    "@stoprocent/noble": "1.15.1",
     "bytebuf": "^1.2.0",
     "crc-full": "1.1.0",
     "node-osmo": "file:",
