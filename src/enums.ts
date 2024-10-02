@@ -38,3 +38,20 @@ export const djiDeviceBitrates: number[] = [
 ];
 
 export const djiDeviceFpss: number[] = [25, 30];
+
+export const getDjiDeviceModelName = (
+  model: DjiDeviceModel,
+): DjiDeviceModelName => {
+  switch (model) {
+    case DjiDeviceModel.osmoAction3:
+      return DjiDeviceModelName.osmoAction3;
+    case DjiDeviceModel.osmoAction4:
+      return DjiDeviceModelName.osmoAction4;
+    case DjiDeviceModel.osmoAction5Pro:
+      return DjiDeviceModelName.osmoAction5Pro;
+    case DjiDeviceModel.osmoPocket3:
+      return DjiDeviceModelName.osmoPocket3;
+    case DjiDeviceModel.unknown:
+      return DjiDeviceModelName.unknown;
+  }
+};

@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import noble, { Peripheral, Characteristic, Service } from '@stoprocent/noble';
 
-import { DjiDeviceModel, DjiDeviceModelName } from './enums.js';
+import {
+  DjiDeviceModel,
+  DjiDeviceModelName,
+  getDjiDeviceModelName,
+} from './enums.js';
 import { DjiDeviceResolution, DjiDeviceImageStabilization } from './enums.js';
 import {
   DjiPairMessagePayload,
@@ -81,7 +85,7 @@ export class DjiDevice {
   constructor(deviceId: string, model: DjiDeviceModel) {
     this.deviceId = deviceId;
     this.model = model;
-    this.modelName = DjiDeviceModelName[model];
+    this.modelName = getDjiDeviceModelName(model);
   }
 
   async startLiveStream(
@@ -313,6 +317,7 @@ export class DjiDevice {
       return;
     }
 
+    console.info(`dji-device: Got ${message.format()}`);
     switch (this.state) {
       case DjiDeviceState.checkingIfPaired:
         this.processCheckingIfPaired(message);
