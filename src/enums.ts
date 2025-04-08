@@ -17,6 +17,7 @@ export enum DjiDeviceResolution {
 }
 
 export enum DjiDeviceModel {
+  osmoAction1,  
   osmoAction3,
   osmoAction4,
   osmoAction5Pro,
@@ -24,6 +25,7 @@ export enum DjiDeviceModel {
   unknown,
 }
 export enum DjiDeviceModelName {
+  osmoAction1 = 'Osmo Action',
   osmoAction3 = 'Osmo Action 3',
   osmoAction4 = 'Osmo Action 4',
   osmoAction5Pro = 'Osmo Action 5 Pro',
@@ -43,6 +45,8 @@ export const getDjiDeviceModelName = (
   model: DjiDeviceModel,
 ): DjiDeviceModelName => {
   switch (model) {
+    case DjiDeviceModel.osmoAction1:
+      return DjiDeviceModelName.osmoAction1;      
     case DjiDeviceModel.osmoAction3:
       return DjiDeviceModelName.osmoAction3;
     case DjiDeviceModel.osmoAction4:
