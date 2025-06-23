@@ -2,59 +2,51 @@
 import { Peripheral, Characteristic, Service } from '@stoprocent/noble';
 import noble from '@stoprocent/noble/with-custom-binding.js';
 import {
-  DjiDeviceModel,
-  DjiDeviceModelName,
-  getDjiDeviceModelName,
+  Model,
+  BroadcastResolution,
+  BroadcastEISMode,
+  Status,
+  BroadcastStatus,
 } from './enums.js';
-import { DjiDeviceResolution, DjiDeviceImageStabilization } from './enums.js';
 import {
-  DjiPairMessagePayload,
-  DjiMessage,
-  DjiMessageWithData,
-  DjiStopStreamingMessagePayload,
-  DjiPreparingToLivestreamMessagePayload,
-  DjiSetupWifiMessagePayload,
-  DjiConfigureMessagePayload,
-  DjiStartStreamingMessagePayload,
-  DjiConfirmStartStreamingMessagePayload,
+  getAuthCommand,
+  get_start_broadcast_command,
+  get_stop_broadcast_command,
+  getWiFiConfigurationCommand,
+  getRTMPConfigCommand,
+  parseNotifyMessage,
+  Message,
+  AuthEvent,
+  BroadcastEvent,
+  StatisticsMessage,
+  WifiListEvent,
+  UnknownEvent,
+  getNextCountBits,
+  get_initiate_broadcast_command,
+  WiFiStatus,
 } from './message.js';
-
-const pairTransactionId = 0x8092;
-const stopStreamingTransactionId = 0xeac8;
-const preparingToLivestreamTransactionId = 0x8c12;
-const setupWifiTransactionId = 0x8c19;
-const startStreamingTransactionId = 0x8c2c;
-const configureTransactionId = 0x8c2d;
-
-const pairTarget = 0x0702;
-const stopStreamingTarget = 0x0802;
-const preparingToLivestreamTarget = 0x0802;
-const setupWifiTarget = 0x0702;
-const configureTarget = 0x0102;
-const startStreamingTarget = 0x0802;
-
-const pairType = 0x450740;
-const stopStreamingType = 0x8e0240;
-const preparingToLivestreamType = 0xe10240;
-const setupWifiType = 0x470740;
-const configureType = 0x8e0240;
-const startStreamingType = 0x780840;
+import {
+  getReadCharacteristicsUUID,
+  getWriteCharacteristicsUUID,
+} from './model.js';
 
 const fff0Id = 'fff0';
+// fff3 is write on OA5
 const fff3Id = 'fff3';
+// fff4 is read on all
 const fff4Id = 'fff4';
+// fff5 is write on others
 const fff5Id = 'fff5';
 
 enum DjiDeviceState {
   idle,
   discovering,
   connecting,
-  checkingIfPaired,
-  pairing,
-  cleaningUp,
+  authorizing,
+  authorized,
   preparingStream,
   settingUpWifi,
-  configuring,
+  configuringRtmp,
   startingStream,
   streaming,
   stoppingStream,
@@ -66,44 +58,49 @@ export class DjiDevice {
   private wifiSsid?: string;
   private wifiPassword?: string;
   private rtmpUrl?: string;
-  private resolution?: DjiDeviceResolution = DjiDeviceResolution.r1080p;
-  private fps: number = 30;
-  private bitrate: number = 6000000;
-  private imageStabilization?: DjiDeviceImageStabilization =
-    DjiDeviceImageStabilization.RockSteadyPlus;
+  private resolution?: BroadcastResolution = BroadcastResolution.fhd;
+  private fps = 30;
+  private bitrate = 6000000;
+  private imageStabilization?: BroadcastEISMode = BroadcastEISMode.rockSteady;
   private deviceId?: string;
-  private pairPinCode?: string = 'love';
+  private pairPinCode = '1234'; // Default PIN
   private noble?: typeof noble;
   private cameraPeripheral?: Peripheral;
-  private fff3Characteristic?: Characteristic;
+  private writeCharacteristic?: Characteristic;
+  private readCharacteristic?: Characteristic;
   private state: DjiDeviceState = DjiDeviceState.idle;
   private startStreamingTimer?: NodeJS.Timeout;
   private stopStreamingTimer?: NodeJS.Timeout;
-  private model?: DjiDeviceModel;
-  private modelName?: DjiDeviceModelName;
+  private model: Model;
   private onStreamingStateChange?: (
     device: DjiDevice,
     state: DjiDeviceState,
+    message: Message,
   ) => void;
   private batteryPercentage?: number;
+  private countBit = Buffer.from([0x00, 0x00]);
 
-  constructor(deviceId: string, model: DjiDeviceModel) {
+  constructor(deviceId: string, model: Model) {
     this.deviceId = deviceId;
     this.model = model;
-    this.modelName = getDjiDeviceModelName(model);
   }
 
   async startLiveStream(
     wifiSsid: string,
     wifiPassword: string,
     rtmpUrl: string,
-    resolution: DjiDeviceResolution,
+    resolution: BroadcastResolution,
     fps: number,
     bitrate: number,
-    imageStabilization: DjiDeviceImageStabilization,
+    imageStabilization: BroadcastEISMode,
+    onStreamingStateChange: (
+      device: DjiDevice,
+      state: DjiDeviceState,
+      message: Message,
+    ) => void,
   ): Promise<void> {
     console.info(
-      `dji-device: Start live stream for ${this.modelName} with resolution ${resolution}, fps ${fps}, bitrate ${bitrate}, image stabilization ${imageStabilization}`,
+      `dji-device: Start live stream for ${Model[this.model]} with resolution ${resolution}, fps ${fps}, bitrate ${bitrate}, image stabilization ${imageStabilization}`,
     );
     this.wifiSsid = wifiSsid;
     this.wifiPassword = wifiPassword;
@@ -112,6 +109,7 @@ export class DjiDevice {
     this.fps = fps;
     this.bitrate = bitrate;
     this.imageStabilization = imageStabilization;
+    this.onStreamingStateChange = onStreamingStateChange;
     this.reset();
     this.startStartStreamingTimer();
     this.setState(DjiDeviceState.discovering);
@@ -140,7 +138,8 @@ export class DjiDevice {
       this.noble = undefined;
     }
     this.cameraPeripheral = undefined;
-    this.fff3Characteristic = undefined;
+    this.writeCharacteristic = undefined;
+    this.readCharacteristic = undefined;
     this.batteryPercentage = undefined;
     this.setState(DjiDeviceState.idle);
   }
@@ -181,13 +180,17 @@ export class DjiDevice {
     this.reset();
   }
 
-  private setState(state: DjiDeviceState): void {
+  private setState(state: DjiDeviceState, message?: Message): void {
     if (this.state === state) {
       return;
     }
-    console.info(`dji-device: State change ${this.state} -> ${state}`);
+    console.info(
+      `dji-device: State change ${DjiDeviceState[this.state]} -> ${DjiDeviceState[state]}`,
+    );
     this.state = state;
-    this.onStreamingStateChange?.(this, state);
+    if (message) {
+      this.onStreamingStateChange?.(this, state, message);
+    }
   }
 
   public getState(): DjiDeviceState {
@@ -198,7 +201,7 @@ export class DjiDevice {
     this.pairPinCode = pinCode;
   }
 
-  public getPairPinCode(): string {
+  public getPairPinCode(): string | undefined {
     return this.pairPinCode;
   }
 
@@ -250,18 +253,21 @@ export class DjiDevice {
       return;
     }
 
-    peripheral.discoverServices([], this.onDiscoverServices.bind(this));
-    this.startStartStreamingTimer();
     this.setState(DjiDeviceState.connecting);
+
+    this.cameraPeripheral.discoverServices(
+      [...allowedCharacteristics],
+      this.onDiscoverServices.bind(this),
+    );
   }
 
   private onDiscoverServices(error: Error | null, services: Service[]): void {
     if (error) {
-      console.error('dji-device: Service discovery error', error);
+      console.error('dji-device: Discover services error', error);
+      this.reset();
       return;
     }
     services.forEach((service) => {
-      console.info(`dji-device: Discovered service ${service.uuid}`);
       service.discoverCharacteristics(
         [],
         this.onDiscoverCharacteristics.bind(this),
@@ -274,335 +280,159 @@ export class DjiDevice {
     characteristics: Characteristic[],
   ): void {
     if (error) {
-      console.error('dji-device: Characteristic discovery error', error);
+      console.error('dji-device: Discover characteristics error', error);
+      this.reset();
       return;
     }
+
+    const writeUUID = getWriteCharacteristicsUUID(this.model)
+      .toString('hex')
+      .toLowerCase();
+    const readUUID = getReadCharacteristicsUUID(this.model)
+      .toString('hex')
+      .toLowerCase();
+
     characteristics.forEach((characteristic) => {
-      if (!allowedCharacteristics.includes(characteristic.uuid)) {
-        console.debug(
-          `dji-device: Ignoring characteristic ${characteristic.uuid}`,
-        );
-        return;
+      if (characteristic.uuid.toLowerCase() === writeUUID) {
+        this.writeCharacteristic = characteristic;
       }
-      console.info(
-        `dji-device: Subscribing to characteristic ${characteristic.uuid}`,
-      );
-      if (characteristic.uuid === fff3Id) {
-        this.fff3Characteristic = characteristic;
+      if (characteristic.uuid.toLowerCase() === readUUID) {
+        this.readCharacteristic = characteristic;
       }
-      characteristic
-        .subscribeAsync()
-        .then(async () => {
-          console.info(
-            'dji-device: Subscribed to characteristic',
-            characteristic.uuid,
-          );
-          characteristic.on('data', (data) => {
-            if (error) {
-              console.error('dji-device: Characteristic read error', error);
-              return;
-            }
-            this.onCharacteristicValueChanged(characteristic, data);
-          });
-          await characteristic.notifyAsync(true);
-          await characteristic.readAsync();
-        })
-        .catch((error) => {
-          if (error) {
-            console.error('dji-device: Characteristic subscribe error', error);
-          }
-        });
     });
+
+    if (!this.writeCharacteristic || !this.readCharacteristic) {
+      console.error('dji-device: Could not find characteristics');
+      this.reset();
+      return;
+    }
+
+    this.readCharacteristic.on('data', (data: Buffer) => {
+      const message = parseNotifyMessage(data, this.model);
+      this.onCharacteristicValueChanged(message);
+    });
+    this.readCharacteristic.subscribe();
+
+    this.setState(DjiDeviceState.authorizing);
+    this.sendAuth();
   }
 
-  private onCharacteristicValueChanged(
-    characteristic: Characteristic,
-    value: Buffer,
-  ): void {
-    if (
-      this.state === DjiDeviceState.connecting &&
-      characteristic.uuid === fff4Id
-    ) {
-      console.info('dji-device: Attempting to pair');
-      const payload = new DjiPairMessagePayload(this.pairPinCode);
-      const request = new DjiMessage(
-        pairTarget,
-        pairTransactionId,
-        pairType,
-        payload.encode(),
-      );
-      this.writeMessage(request);
-      this.setState(DjiDeviceState.checkingIfPaired);
-      return;
+  private onCharacteristicValueChanged(message: Message): void {
+    console.log(
+      `Received message in state ${DjiDeviceState[this.state]}`,
+      message,
+    );
+
+    if ('status' in message) {
+      const broadcastEvent = message as BroadcastEvent;
+      if (broadcastEvent.status === BroadcastStatus.readyForWiFiCredentials) {
+        this.setState(DjiDeviceState.settingUpWifi, message);
+        this.sendWifiSetup();
+      } else if (broadcastEvent.status === BroadcastStatus.live) {
+        this.setState(DjiDeviceState.streaming, message);
+      } else if (broadcastEvent.status === BroadcastStatus.preparing) {
+        // we can ignore this for now
+      }
     }
 
-    if (!value?.length) {
-      console.info('dji-device: Received empty message');
-      return;
+    if ('isAuthenticated' in message) {
+      const authEvent = message as AuthEvent;
+      if (authEvent.isAuthenticated) {
+        this.setState(DjiDeviceState.authorized, message);
+        this.sendInitiateBroadcast();
+      } else {
+        // Pin code is probably wrong, or user did not accept pairing
+        this.reset();
+      }
     }
 
-    let message;
-    try {
-      message = new DjiMessageWithData(value);
-      console.info(`dji-device: Received message ${message.format()}`);
-    } catch (error) {
-      console.error(
-        `dji-device: Error parsing message from characteristic ${characteristic.uuid}`,
-        error,
-      );
-      return;
+    if ('wifiStatus' in message) {
+      const wifiEvent = message as WifiListEvent;
+      if (wifiEvent.wifiStatus === WiFiStatus.connected) {
+        this.setState(DjiDeviceState.configuringRtmp, message);
+        this.sendRtmpSetup();
+      } else {
+        // Wifi failed
+        this.reset();
+      }
     }
 
-    console.info(`dji-device: Got ${message.format()}`);
-    switch (this.state) {
-      case DjiDeviceState.checkingIfPaired:
-        this.processCheckingIfPaired(message);
-        break;
-      case DjiDeviceState.pairing:
-        this.processPairing();
-        break;
-      case DjiDeviceState.cleaningUp:
-        this.processCleaningUp(message);
-        break;
-      case DjiDeviceState.preparingStream:
-        this.processPreparingStream(message);
-        break;
-      case DjiDeviceState.settingUpWifi:
-        this.processSettingUpWifi(message);
-        break;
-      case DjiDeviceState.configuring:
-        this.processConfiguring(message);
-        break;
-      case DjiDeviceState.startingStream:
-        this.processStartingStream(message);
-        break;
-      case DjiDeviceState.streaming:
-        this.processStreaming(message);
-        break;
-      case DjiDeviceState.stoppingStream:
-        this.processStoppingStream(message);
-        break;
-      default:
-        console.info(
-          `dji-device: Received message in unexpected state '${this.state}'`,
-        );
+    if ('temperature' in message) {
+      const stats = message as StatisticsMessage;
+      this.batteryPercentage = stats.battery;
+      this.onStreamingStateChange?.(this, this.state, message);
+    }
+  }
+
+  private sendAuth() {
+    console.info('dji-device: Sending auth');
+    this.countBit = getNextCountBits(this.countBit);
+    const message = getAuthCommand(this.pairPinCode, this.countBit);
+    if (message) {
+      this.writeValue(message);
+    }
+  }
+
+  private sendInitiateBroadcast() {
+    console.info('dji-device: Sending initiate broadcast');
+    const message = get_initiate_broadcast_command();
+    this.writeValue(message);
+  }
+
+  private sendWifiSetup() {
+    console.info('dji-device: Sending wifi setup');
+    if (!this.wifiSsid || !this.wifiPassword) {
+      console.error('dji-device: wifi credentials not set');
+      this.reset();
+      return;
+    }
+    const message = getWiFiConfigurationCommand(
+      this.wifiSsid,
+      this.wifiPassword,
+    );
+    if (message) {
+      this.writeValue(message);
+    }
+  }
+
+  private sendRtmpSetup() {
+    console.info('dji-device: Sending rtmp setup');
+    if (!this.rtmpUrl || !this.resolution || !this.imageStabilization) {
+      console.error('dji-device: rtmp config not set');
+      this.reset();
+      return;
+    }
+    this.countBit = getNextCountBits(this.countBit);
+    const message = getRTMPConfigCommand(
+      this.rtmpUrl,
+      this.bitrate,
+      this.resolution,
+      this.fps,
+      false, // auto
+      this.imageStabilization,
+      this.countBit,
+    );
+    if (message) {
+      this.writeValue(message);
     }
   }
 
   private sendStopStream(): void {
-    const payload = new DjiStopStreamingMessagePayload();
-    this.writeMessage(
-      new DjiMessage(
-        stopStreamingTarget,
-        stopStreamingTransactionId,
-        stopStreamingType,
-        payload.encode(),
-      ),
-    );
-  }
-
-  private processCheckingIfPaired(response: DjiMessage): void {
-    if (response.id !== pairTransactionId) {
-      return;
-    }
-    if (response.payload.equals(Buffer.from([0, 1]))) {
-      this.processPairing();
-    } else {
-      this.setState(DjiDeviceState.pairing);
-    }
-  }
-
-  private processPairing(): void {
-    this.sendStopStream();
-    this.setState(DjiDeviceState.cleaningUp);
-  }
-
-  private processCleaningUp(response: DjiMessage): void {
-    if (response.id !== stopStreamingTransactionId) {
-      return;
-    }
-    const payload = new DjiPreparingToLivestreamMessagePayload();
-    this.writeMessage(
-      new DjiMessage(
-        preparingToLivestreamTarget,
-        preparingToLivestreamTransactionId,
-        preparingToLivestreamType,
-        payload.encode(),
-      ),
-    );
-    this.setState(DjiDeviceState.preparingStream);
-  }
-
-  private processPreparingStream(response: DjiMessage): void {
-    if (
-      response.id !== preparingToLivestreamTransactionId ||
-      !this.wifiSsid ||
-      !this.wifiPassword
-    ) {
-      return;
-    }
-    const payload = new DjiSetupWifiMessagePayload(
-      this.wifiSsid,
-      this.wifiPassword,
-    );
-    this.writeMessage(
-      new DjiMessage(
-        setupWifiTarget,
-        setupWifiTransactionId,
-        setupWifiType,
-        payload.encode(),
-      ),
-    );
-    this.setState(DjiDeviceState.settingUpWifi);
-  }
-
-  private processSettingUpWifi(response: DjiMessage): void {
-    if (response.id !== setupWifiTransactionId || !this.model) {
-      return;
-    }
-    switch (+this.model) {
-      case DjiDeviceModel.osmoAction3:
-        this.sendStartStreaming();
-        break;
-
-      case DjiDeviceModel.osmoAction4: {
-        if (!this.imageStabilization) {
-          return;
-        }
-        const payload = new DjiConfigureMessagePayload(
-          this.imageStabilization,
-          false,
-        );
-        this.writeMessage(
-          new DjiMessage(
-            configureTarget,
-            configureTransactionId,
-            configureType,
-            payload.encode(),
-          ),
-        );
-        this.setState(DjiDeviceState.configuring);
-        break;
-      }
-      case DjiDeviceModel.osmoAction5Pro: {
-        if (!this.imageStabilization) {
-          return;
-        }
-        const payload = new DjiConfigureMessagePayload(
-          this.imageStabilization,
-          true,
-        );
-        this.writeMessage(
-          new DjiMessage(
-            configureTarget,
-            configureTransactionId,
-            configureType,
-            payload.encode(),
-          ),
-        );
-        this.setState(DjiDeviceState.configuring);
-        break;
-      }
-      case DjiDeviceModel.osmoPocket3:
-        this.sendStartStreaming();
-        break;
-      case DjiDeviceModel.unknown:
-        this.sendStartStreaming();
-        break;
-    }
-  }
-
-  private processConfiguring(response: DjiMessage): void {
-    if (response.id !== configureTransactionId) {
-      return;
-    }
-    this.sendStartStreaming();
-  }
-
-  private sendStartStreaming(): void {
-    if (!this.rtmpUrl || !this.resolution) {
-      return;
-    }
-    const payload = new DjiStartStreamingMessagePayload(
-      this.rtmpUrl,
-      this.resolution,
-      this.fps,
-      this.bitrate / 1000,
-      this.model === DjiDeviceModel.osmoAction5Pro,
-    );
-    this.writeMessage(
-      new DjiMessage(
-        startStreamingTarget,
-        startStreamingTransactionId,
-        startStreamingType,
-        payload.encode(),
-      ),
-    );
-
-    // Patch for OA5P: Send the confirmation payload to actually start the stream.
-    // This is an exact copy of the stop-streaming command, but the last data-bit in the payload is set to 1 instead of 2.
-    // It may probably work fine sending it on all devices, but limiting it to OA5P for now.
-    if (this.model === DjiDeviceModel.osmoAction5Pro) {
-      const confirmStartStreamPayload =
-        new DjiConfirmStartStreamingMessagePayload();
-      this.writeMessage(
-        new DjiMessage(
-          stopStreamingTarget,
-          stopStreamingTransactionId,
-          stopStreamingType,
-          confirmStartStreamPayload.encode(),
-        ),
-      );
-    }
-
-    this.setState(DjiDeviceState.startingStream);
-  }
-
-  private processStartingStream(response: DjiMessage): void {
-    if (response.id !== startStreamingTransactionId) {
-      return;
-    }
-    this.setState(DjiDeviceState.streaming);
-    this.stopStartStreamingTimer();
-  }
-
-  private processStreaming(response: DjiMessage): void {
-    switch (response.type) {
-      case 0x020d00:
-        if (response.payload.length >= 21) {
-          this.batteryPercentage = response.payload[20];
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  private processStoppingStream(response: DjiMessage): void {
-    if (response.id !== stopStreamingTransactionId) {
-      return;
-    }
-    this.reset();
-  }
-
-  private writeMessage(message: DjiMessage): void {
-    this.writeValue(message.encode());
+    console.info('dji-device: Sending stop stream');
+    const message = get_stop_broadcast_command();
+    this.writeValue(message);
   }
 
   private async writeValue(value: Buffer): Promise<void> {
-    if (!this.fff3Characteristic) {
-      console.error('dji-device: No characteristic to write to');
+    if (!this.writeCharacteristic) {
+      console.error('dji-device: Write characteristic not available');
       return;
     }
-    await this.fff3Characteristic
-      .writeAsync(value, false)
-      .then(() => {
-        console.debug('dji-device: Write successful');
-      })
-      .catch((error) => {
-        if (error) {
-          console.error('dji-device: Write error', error);
-        }
-      });
+    try {
+      await this.writeCharacteristic.writeAsync(value, true);
+    } catch (error) {
+      console.error('dji-device: Write error', error);
+      this.reset();
+    }
   }
 }

@@ -2,25 +2,16 @@ import { Peripheral } from '@stoprocent/noble';
 import noble from '@stoprocent/noble/with-custom-binding.js';
 
 import { EventEmitter } from 'events';
-import {
-  djiModelFromManufacturerData,
-  djiModelNameFromManufacturerData,
-  isDjiDevice,
-} from './model.js';
-import { DjiDeviceModel, DjiDeviceModelName } from './enums.js';
+import { getModelFromManufacturerData } from './model.js';
+import { Model } from './enums.js';
 
 export class DjiDiscoveredDevice {
   peripheral: Peripheral;
-  model: DjiDeviceModel;
-  modelName: DjiDeviceModelName;
-  constructor(
-    peripheral: Peripheral,
-    model: DjiDeviceModel,
-    modelName: DjiDeviceModelName,
-  ) {
+  model: Model;
+
+  constructor(peripheral: Peripheral, model: Model) {
     this.peripheral = peripheral;
     this.model = model;
-    this.modelName = modelName;
   }
 }
 
@@ -53,7 +44,7 @@ export class DjiDeviceScanner extends EventEmitter {
     if (state === 'poweredOn') {
       console.log('Powered on');
       this.noble.reset();
-      this.noble?.startScanningAsync([], false);
+      this.noble?.startScanningAsync([], true); // allow duplicates
     }
   }
 
@@ -62,7 +53,8 @@ export class DjiDeviceScanner extends EventEmitter {
     if (!manufacturerData) {
       return;
     }
-    if (!isDjiDevice(manufacturerData)) {
+    const model = getModelFromManufacturerData(manufacturerData);
+    if (model === null) {
       return;
     }
     if (
@@ -72,11 +64,11 @@ export class DjiDeviceScanner extends EventEmitter {
     ) {
       return;
     }
-    const model = djiModelFromManufacturerData(manufacturerData);
-    const modelName = djiModelNameFromManufacturerData(manufacturerData);
-    console.info(`dji-scanner: Manufacturer data ${manufacturerData.toString('hex')} for peripheral id ${peripheral.id}
-    and model ${modelName}`);
-    const device = new DjiDiscoveredDevice(peripheral, model, modelName);
+    console.info(`dji-scanner: Manufacturer data ${manufacturerData.toString(
+      'hex',
+    )} for peripheral id ${peripheral.id}
+    and model ${Model[model]}`);
+    const device = new DjiDiscoveredDevice(peripheral, model);
     this.discoveredDevices.push(device);
     this.emit('deviceDiscovered', device);
   }
