@@ -29,5 +29,5 @@
     // "Go to Definition" in VSCode
     "declarationMap": true
   },
-  "include": ["./src/**/*", "__tests__/**/*"]
+  "include": ["./src/**/*"]
 }

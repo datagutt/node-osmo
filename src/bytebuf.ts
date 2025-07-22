@@ -119,7 +119,7 @@ class ByteBuf extends DataView {
    * Reads the next boolean.
    */
   readBool(): boolean {
-    return this.getInt8(this.#byteOffset++) !== 0;
+    return this.getBool(this.#byteOffset++);
   }
 
   /**
@@ -136,7 +136,7 @@ class ByteBuf extends DataView {
    * @param value The value.
    */
   writeBool(value: boolean): void {
-    this.setInt8(this.#byteOffset++, value ? 1 : 0);
+    this.setBool(this.#byteOffset++, value);
   }
 
   /**
