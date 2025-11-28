@@ -6,20 +6,21 @@ import {
   DjiDeviceResolution,
 } from '../dist/index.js';
 
-if (process.argv.length < 6) {
-  console.error(
-    'Usage: node examples/connect-to-device.js <device-id> <device-model> <wi-fi-name> <wi-fi-password> <rtmp-url>',
-  );
-  // list support models
-  console.error('Supported models:', Object.values(DjiDeviceModel).join(', '));
-  process.exit(1);
-}
+// if (process.argv.length < 6) {
+//   console.error(
+//     'Usage: node examples/connect-to-device.js <device-id> <device-model> <wi-fi-name> <wi-fi-password> <rtmp-url>',
+//   );
+//   // list support models
+//   console.error('Supported models:', Object.values(DjiDeviceModel).join(', '));
+//   process.exit(1);
+// }
 
-const deviceId = process.argv[2];
+
+const deviceId = '...';//process.argv[2];
 const deviceModel = DjiDeviceModel.osmoAction4; // process.argv[3];
-const wiFiName = process.argv[4];
-const wiFiPassword = process.argv[5];
-const rtmpUrl = process.argv[6];
+const wiFiName = '...';//process.argv[4];
+const wiFiPassword = '...';//process.argv[5];
+const rtmpUrl = 'rtmp://192.168.0.129/live/stream';//process.argv[6];
 
 console.log('Connecting to device:', deviceId, deviceModel);
 
@@ -32,6 +33,6 @@ await device.startLiveStream(
   rtmpUrl,
   DjiDeviceResolution.r1080p, // resolution
   30,
-  djiDeviceBitrates[djiDeviceBitrates.length - 1], // bitrate
+  djiDeviceBitrates[0], // bitrate
   DjiDeviceImageStabilization.RockSteadyPlus, // stabilization mode
 );
