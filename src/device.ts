@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Peripheral, Characteristic, Service } from '@stoprocent/noble';
-import noble from '@stoprocent/noble/with-custom-binding.js';
+import {withBindings} from '@stoprocent/noble';
 import {
   DjiDeviceModel,
   DjiDeviceModelName,
@@ -73,7 +73,7 @@ export class DjiDevice {
     DjiDeviceImageStabilization.RockSteadyPlus;
   private deviceId?: string;
   private pairPinCode?: string = 'love';
-  private noble?: typeof noble;
+  private noble;
   private cameraPeripheral?: Peripheral;
   private fff3Characteristic?: Characteristic;
   private state: DjiDeviceState = DjiDeviceState.idle;
@@ -115,7 +115,7 @@ export class DjiDevice {
     this.reset();
     this.startStartStreamingTimer();
     this.setState(DjiDeviceState.discovering);
-    this.noble = noble({ extended: true });
+    this.noble = withBindings('mac');
     this.noble.on('stateChange', this.onStateChange.bind(this));
     this.noble.on('discover', this.onDiscover.bind(this));
   }
@@ -304,7 +304,7 @@ export class DjiDevice {
             }
             this.onCharacteristicValueChanged(characteristic, data);
           });
-          await characteristic.notifyAsync(true);
+          //await characteristic.notifyAsync(true);
           await characteristic.readAsync();
         })
         .catch((error) => {

@@ -1,5 +1,5 @@
 import { Peripheral } from '@stoprocent/noble';
-import noble from '@stoprocent/noble/with-custom-binding.js';
+import {withBindings} from '@stoprocent/noble';
 
 import { EventEmitter } from 'events';
 import {
@@ -27,7 +27,7 @@ export class DjiDiscoveredDevice {
 export class DjiDeviceScanner extends EventEmitter {
   static shared = new DjiDeviceScanner();
   discoveredDevices: DjiDiscoveredDevice[] = [];
-  private noble?: typeof noble;
+  private noble;
 
   constructor() {
     super();
@@ -35,7 +35,7 @@ export class DjiDeviceScanner extends EventEmitter {
 
   async startScanningForDevices(): Promise<void> {
     this.discoveredDevices = [];
-    this.noble = noble({ extended: true });
+    this.noble = withBindings('mac');
     this.noble.on('stateChange', this.onStateChange.bind(this));
     this.noble.on('discover', this.onDiscover.bind(this));
   }
@@ -62,6 +62,7 @@ export class DjiDeviceScanner extends EventEmitter {
     if (!manufacturerData) {
       return;
     }
+    console.info(`dji-scanner: Manufacturer data ${manufacturerData.subarray(0, 2).toString('hex')} for peripheral id ${peripheral.id}`);
     if (!isDjiDevice(manufacturerData)) {
       return;
     }
